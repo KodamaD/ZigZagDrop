@@ -5,11 +5,60 @@ from copy import deepcopy
 from collections import deque
 
 from .grid import Grid
-from .piece import Piece, PIECE_SHAPE_LIST
+from .piece import Piece
 
 GRID_SIZE = 12
 BLOCK_TYPES = 4
 PIECE_QUEUE_SIZE = 2
+
+PIECE_SHAPE_LIST = [
+    np.array([
+        [0, 1, 0],
+        [0, 1, 0],
+        [0, 1, 0],
+    ]),
+    np.array([
+        [1, 1],
+        [1, 0],
+    ]),
+]
+
+PATTERN_LIST = [
+    (
+        np.array([
+            [1, 1, 1, 1]
+        ]),
+        [(0, j) for j in range(-GRID_SIZE, GRID_SIZE)],
+        2,
+    ),
+    (
+        np.array([
+            [1, 1, 1]
+            [1, 0, 0],
+            [1, 0, 0],
+        ]),
+        [(0, j) for j in range(-GRID_SIZE, GRID_SIZE)] + [(i, 0) for i in range(-GRID_SIZE, GRID_SIZE)],
+        4,
+    ),
+    (
+        np.array([
+            [0, 1, 1]
+            [1, 1, 0],
+            [1, 0, 0],
+        ]),
+        [(k + 1, -k) for k in range(-GRID_SIZE, GRID_SIZE)] + [(k + 2, -k) for k in range(-GRID_SIZE, GRID_SIZE)],
+        4,
+    ),
+    (
+        np.array([
+            [0, 1, 0]
+            [1, 1, 1],
+            [0, 1, 0],
+        ]),
+        [(i, j) for i in range(-1, 4) for j in range(-1, 4)],
+        1,
+    ),
+]
 
 class Game:
     def __init__(self) -> None:

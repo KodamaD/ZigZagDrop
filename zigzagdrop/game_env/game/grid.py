@@ -1,6 +1,6 @@
 import numpy as np
 
-from .game import GRID_SIZE
+from .game import GRID_SIZE, PATTERN_LIST
 
 class Grid:
     def __init__(self, grid: np.array) -> None:
@@ -60,4 +60,40 @@ class Grid:
             for y, b in enumerate(blocks):
                 self.grid[x][y] = b
 
-    def 
+    def check_patterns(self) -> np.array:
+        deleted = np.zeros_like(self.grid)
+        
+        for rotation in range(4):
+            for (pattern, delete, rotation_limit) in PATTERN_LIST:
+                if rotation >= rotation_limit:
+                    continue
+                
+                n, m = pattern.shape
+                
+                def matches(sx, sy):
+                    last = 0
+                    for dx in range(n):
+                        for dy in range(m):
+                            x = sx + dx
+                            y = sy + dy
+                            if pattern[dx][dy] == 1:
+                                if not (0 <= x < GRID_SIZE and 0 <= y < GRID_SIZE):
+                                    return False
+                                if not (last == 0 or last == self.grid[x][y]):
+                                    return False
+                                last = self.grid[x][y]
+                    return True
+                                    
+                for sx in range(-(n - 1), GRID_SIZE):
+                    for sy in range(-(m - 1), GRID_SIZE):
+                        if matches(sx, sy):
+                            for (dx, dy) in delete:
+                                x = sx + dx
+                                y = sy + dy
+                                if 0 <= x < GRID_SIZE and 0 <= y < GRID_SIZE:
+                                    deleted[x][y] = 1    
+                        
+            self.grid = np.rot90(self.grid)
+            deleted = np.rot90(deleted)
+            
+        return deleted

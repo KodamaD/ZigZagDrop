@@ -2,18 +2,6 @@ import numpy as np
 
 from .game import GRID_SIZE
 
-PIECE_SHAPE_LIST = [
-    np.array([
-        [0, 1, 0],
-        [0, 1, 0],
-        [0, 1, 0],
-    ]),
-    np.array([
-        [1, 1],
-        [1, 0],
-    ]),
-]
-
 class Piece:
     def __init__(self, blocks: np.array, pos: int) -> None:
         n, m = blocks.shape
