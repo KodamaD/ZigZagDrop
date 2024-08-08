@@ -1,6 +1,6 @@
 import numpy as np
 
-from .game import GRID_SIZE
+from .game_config import *
 
 class Piece:
     def __init__(self, blocks: np.array, pos: int) -> None:
@@ -30,7 +30,7 @@ class Piece:
             ok = True
             for i in range(n):
                 if np.sum(self.blocks[i]) > 0:
-                    x = self.pos + i - n // 2
+                    x = self.pos + i
                     if x < 0:
                         self.pos += 1
                         ok = False
