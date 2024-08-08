@@ -57,4 +57,14 @@ PATTERN_LIST = [
         1,
         500,
     ),
+    (
+        np.array([
+            [1, 0, 0],
+            [1, 1, 1],
+            [1, 0, 0],
+        ]),
+        [(1, j) for j in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)] + [(i, 0) for i in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)],
+        4,
+        500,
+    ),
 ]

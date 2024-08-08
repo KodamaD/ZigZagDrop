@@ -16,14 +16,14 @@ class Game:
     def __init__(self, screen: Any, render_mode: bool = False) -> None:
         self.grid = Grid(np.zeros((INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE), dtype=np.int32))
         self.pieces = deque()
-        self.direction = 'Vertical'
+        self.directions = deque()
         self.score = 0
         self.game_over = False
         self.screen = screen
         self.render_mode = render_mode
-        self._load_pieces()
+        self._load_data()
 
-    def _load_pieces(self) -> None:
+    def _load_data(self) -> None:
         while len(self.pieces) < PIECE_QUEUE_SIZE + 1:
             blocks = deepcopy(random.choice(PIECE_SHAPE_LIST))
             n, m = blocks.shape
@@ -32,9 +32,14 @@ class Game:
                     if blocks[i][j] != 0:
                         blocks[i][j] = random.randint(1, BLOCK_TYPES)
             self.pieces.append(Piece(blocks, GRID_SIZE // 2 - n // 2))
+        while len(self.directions) < PIECE_QUEUE_SIZE + 1:
+            self.directions.append(random.choice(['Horizontal', 'Vertical']))
 
     def piece(self) -> Piece:
         return self.pieces[0]
+    
+    def direction(self) -> str:
+        return self.directions[0]
 
     def move_and_rot(self, pos: int, rot: int) -> None:
         self.piece().move(pos - self.piece().pos)
@@ -44,7 +49,7 @@ class Game:
     def place(self) -> Tuple[Any, int]:
         reward = 0
         
-        match self.direction:
+        match self.direction():
             case 'Horizontal':
                 self.grid.place_horizontal(self.piece().pos, self.piece().blocks)
             case 'Vertical':
@@ -59,8 +64,8 @@ class Game:
             return None, reward
 
         self.pieces.popleft()
-        self._load_pieces()
-        self.direction = random.choice(['Horizontal', 'Vertical'])
+        self.directions.popleft()
+        self._load_data()
 
         _, reward_ = self._force_gravity()
         reward += reward_
@@ -70,7 +75,7 @@ class Game:
     def _force_gravity(self) -> Tuple[Any, int]:
         reward = 0
         while True:
-            match self.direction:
+            match self.direction():
                 case 'Horizontal':
                     self.grid.fix_horizontal()
                 case 'Vertical':
@@ -93,9 +98,9 @@ class Game:
             return
         
         for i in range(GRID_SIZE + 7):
-            self.screen.addstr(i, 0, '　' * 100, curses.color_pair(1))
+            self.screen.addstr(i, 0, '　' * 150, curses.color_pair(1))
 
-        match self.direction:
+        match self.direction():
             case 'Horizontal':
                 blocks = self.piece().blocks
                 n, m = blocks.shape
@@ -121,7 +126,7 @@ class Game:
 
         for i in range(GRID_SIZE):
             j = GRID_SIZE - i - 1
-            self.screen.addstr(4 + GRID_SIZE - j, 2 * (2 + i), '　', curses.color_pair(8))
+            self.screen.addstr(4 + GRID_SIZE - j, 2 * (2 + i), 'ｘ', curses.color_pair(8))
 
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
@@ -147,6 +152,11 @@ class Game:
             for i in range(n):
                 for j in range(m):
                     self.screen.addstr(1 + 4 * k + i, 2 * (GRID_SIZE + 9 + j), '　', curses.color_pair(blocks[i][j] + 1))
+
+        for (k, dir) in enumerate(self.directions):
+            if k == 0:
+                continue
+            self.screen.addstr(2 + 4 * k, 2 * (GRID_SIZE + 15), 'Ｈ' if dir == 'Horizontal' else 'Ｖ', curses.color_pair(7))
 
         if self.game_over:
             self.screen.addstr(13, 2 * (GRID_SIZE + 9), 'Ｇａｍｅ　Ｏｖｅｒ', curses.color_pair(7))

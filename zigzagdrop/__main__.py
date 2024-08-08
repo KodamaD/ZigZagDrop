@@ -17,7 +17,7 @@ def play_solo(screen):
 
     while True:
         env.render()
-        action = player.get_action(env.unwrapped.game.direction)
+        action = player.get_action(env.unwrapped.game.direction())
         _, _, done, _, _ = env.step(action)
         time.sleep(0.05)
         if done:
@@ -34,7 +34,7 @@ def main(screen):
     curses.start_color()
     curses.curs_set(False)
     screen.keypad(True)
-    screen.refresh()
+    screen.refresh()    
 
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_CYAN)
@@ -43,7 +43,7 @@ def main(screen):
     curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_GREEN)
     curses.init_pair(6, curses.COLOR_BLACK, curses.COLOR_WHITE)
     curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)
-    curses.init_pair(8, curses.COLOR_BLACK, curses.COLOR_RED)
+    curses.init_pair(8, curses.COLOR_RED, curses.COLOR_BLACK)
 
     time.sleep(1.0)
     play_solo(screen)
