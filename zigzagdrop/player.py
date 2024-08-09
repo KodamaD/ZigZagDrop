@@ -33,25 +33,3 @@ class HumanPlayer:
                     return HumanAction.ROT_L
                 elif key == curses.KEY_DOWN:
                     return HumanAction.ROT_R
-
-        # if keyboard.is_pressed('enter'):
-        #     return HumanAction.DROP
-        # match direction:
-        #     case 'Horizontal':
-        #         if keyboard.is_pressed('up'):
-        #             return HumanAction.MOVE_L
-        #         elif keyboard.is_pressed('down'):
-        #             return HumanAction.MOVE_R
-        #         elif keyboard.is_pressed('left'):
-        #             return HumanAction.ROT_L
-        #         elif keyboard.is_pressed('left'):
-        #             return HumanAction.ROT_R
-        #     case 'Vertical':
-        #         if keyboard.is_pressed('left'):
-        #             return HumanAction.MOVE_L
-        #         elif keyboard.is_pressed('right'):
-        #             return HumanAction.MOVE_R
-        #         elif keyboard.is_pressed('up'):
-        #             return HumanAction.ROT_L
-        #         elif keyboard.is_pressed('down'):
-        #             return HumanAction.ROT_R

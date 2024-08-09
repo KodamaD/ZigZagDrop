@@ -12,6 +12,10 @@ from .grid import Grid
 from .piece import Piece
 from .game_config import *
 
+import sys
+sys.path.append('.../')
+from config import *
+
 class Game:
     def __init__(self, screen: Any, render_mode: bool = False) -> None:
         self.grid = Grid(np.zeros((INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE), dtype=np.int32))
@@ -97,8 +101,11 @@ class Game:
         if not self.render_mode:
             return
         
+        def write(x: int, y: int, s: str, c: int):
+            self.screen.addstr(x, 2 * y, s, curses.color_pair(c))
+        
         for i in range(GRID_SIZE + 7):
-            self.screen.addstr(i, 0, '　' * 150, curses.color_pair(1))
+            write(i, 0, '　' * 150, Colors.BLACK)
 
         match self.direction():
             case 'Horizontal':
@@ -106,33 +113,32 @@ class Game:
                 n, m = blocks.shape
                 for i in range(n):
                     for j in range(m):
-                        self.screen.addstr(4 + GRID_SIZE - self.piece().pos - i, 2 * (GRID_SIZE + 3 + j), '　', curses.color_pair(blocks[i][j] + 1))
+                        write(4 + GRID_SIZE - self.piece().pos - i, GRID_SIZE + 3 + j, '　', Colors.BLOCKS[blocks[i][j]])
                 for i in range(GRID_SIZE):
-                    self.screen.addstr(5 + i, 2 * (2 + GRID_SIZE), '・', curses.color_pair(7))
+                    write(5 + i, 2 + GRID_SIZE, '・', Colors.WHITE_FG)
             case 'Vertical':
                 blocks = self.piece().blocks
                 n, m = blocks.shape
                 for i in range(n):
                     for j in range(m):
-                        self.screen.addstr(3 - j, 2 * (2 + self.piece().pos + i), '　', curses.color_pair(blocks[i][j] + 1))
+                        write(3 - j, 2 + self.piece().pos + i, '　', Colors.BLOCKS[blocks[i][j]])
                 for i in range(GRID_SIZE):
-                    self.screen.addstr(4, 2 * (2 + i), '・', curses.color_pair(7))
+                    write(4, 2 + i, '・', Colors.WHITE_FG)
 
         for i in range(GRID_SIZE + 1):
-            self.screen.addstr(5 + i, 2 * 1, '　', curses.color_pair(6))
-            self.screen.addstr(5 + GRID_SIZE, 2 * (1 + i), '　', curses.color_pair(6))
+            write(5 + i, 1, '　', Colors.WHITE_BG)
+            write(5 + GRID_SIZE, 1 + i, '　', Colors.WHITE_BG)
         for i in range(GRID_SIZE + 7):
-            self.screen.addstr(i, 2 * (GRID_SIZE + 7), '：', curses.color_pair(7))
+            write(i, GRID_SIZE + 7, '：', Colors.WHITE_FG)
 
         for i in range(GRID_SIZE):
             j = GRID_SIZE - i - 1
-            self.screen.addstr(4 + GRID_SIZE - j, 2 * (2 + i), 'ｘ', curses.color_pair(8))
-
+            write(4 + GRID_SIZE - j, 2 + i, 'ｘ', Colors.RED_FG)
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 id = self.grid.grid[i][j]
                 if id != 0:
-                    self.screen.addstr(4 + GRID_SIZE - j, 2 * (2 + i), '　', curses.color_pair(id + 1))
+                    write(4 + GRID_SIZE - j, 2 + i, '　', Colors.BLOCKS[id])
 
         def wide_number(n) -> str:
             wide_list = '０１２３４５６７８９'
@@ -141,8 +147,8 @@ class Game:
                 ret += wide_list[ord(c) - ord('0')]
             return ret
 
-        self.screen.addstr(1, 2 * (GRID_SIZE + 9), f'Ｓｃｏｒｅ：{wide_number(self.score)}', curses.color_pair(7))
-        self.screen.addstr(3, 2 * (GRID_SIZE + 9), 'Ｎｅｘｔ', curses.color_pair(7))
+        write(1, GRID_SIZE + 9, f'Ｓｃｏｒｅ：{wide_number(self.score)}', Colors.WHITE_FG)
+        write(3, GRID_SIZE + 9, 'Ｎｅｘｔ', Colors.WHITE_FG)
 
         for (k, piece) in enumerate(self.pieces):
             if k == 0:
@@ -151,16 +157,16 @@ class Game:
             n, m = blocks.shape
             for i in range(n):
                 for j in range(m):
-                    self.screen.addstr(1 + 4 * k + i, 2 * (GRID_SIZE + 9 + j), '　', curses.color_pair(blocks[i][j] + 1))
+                    write(1 + 4 * k + i, GRID_SIZE + 9 + j, '　', Colors.BLOCKS[blocks[i][j]])
 
         for (k, dir) in enumerate(self.directions):
             if k == 0:
                 continue
-            self.screen.addstr(2 + 4 * k, 2 * (GRID_SIZE + 15), 'Ｈ' if dir == 'Horizontal' else 'Ｖ', curses.color_pair(7))
+            write(2 + 4 * k, GRID_SIZE + 15, 'Ｈ' if dir == 'Horizontal' else 'Ｖ', curses.color_pair(7))
 
         if self.game_over:
-            self.screen.addstr(13, 2 * (GRID_SIZE + 9), 'Ｇａｍｅ　Ｏｖｅｒ', curses.color_pair(7))
-            self.screen.addstr(15, 2 * (GRID_SIZE + 9), 'Ｐｒｅｓｓ　‘ｑ’　ｔｏ　Ｅｘｉｔ', curses.color_pair(7))
+            write(13, GRID_SIZE + 9, 'Ｇａｍｅ　Ｏｖｅｒ', Colors.WHITE_FG)
+            write(15, GRID_SIZE + 9, 'Ｐｒｅｓｓ　‘ｑ’　ｔｏ　Ｅｘｉｔ', Colors.WHITE_FG)
 
         self.screen.refresh()
         time.sleep(sleep)
