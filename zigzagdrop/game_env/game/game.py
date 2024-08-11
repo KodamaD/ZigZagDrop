@@ -4,7 +4,7 @@ import numpy as np
 import curses
 import time
 
-from typing import Any, Tuple, List
+from typing import Any, Tuple, Dict
 from copy import deepcopy
 from collections import deque
 
@@ -17,14 +17,18 @@ sys.path.append('.../')
 from config import *
 
 class Game:
-    def __init__(self, screen: Any, render_mode: bool = False) -> None:
+    def __init__(self, screen: Any) -> None:
         self.grid = Grid(np.zeros((INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE), dtype=np.int32))
         self.pieces = deque()
         self.directions = deque()
-        self.score = 0
+
+        self.turn = 0
+        self.points = 0
+        self.score = 0.0
         self.game_over = False
+        
         self.screen = screen
-        self.render_mode = render_mode
+
         self._load_data()
 
     def _load_data(self) -> None:
@@ -50,8 +54,8 @@ class Game:
         for _ in range(rot):
             self.piece().rot_l()
 
-    def place(self) -> Tuple[Any, int]:
-        reward = 0
+    def place(self) -> Tuple[float, Dict]:
+        score_0 = self.score
         
         match self.direction():
             case 'Horizontal':
@@ -59,25 +63,34 @@ class Game:
             case 'Vertical':
                 self.grid.place_vertical(self.piece().pos, self.piece().blocks)
         self.render(0.1)
-
-        _, reward_ = self._force_gravity()
-        reward += reward_
+        self._force_gravity()
+        self._recalc_score()
+        score_1 = self.score
 
         self.game_over = self.grid.is_game_over()
         if self.game_over:
-            return None, reward
+            return -100, {}
 
+        self.turn += 1
         self.pieces.popleft()
         self.directions.popleft()
         self._load_data()
 
-        _, reward_ = self._force_gravity()
-        reward += reward_
+        self._force_gravity()
+        self._recalc_score()
+        self._recalc_score()
+        score_2 = self.score
 
-        return None, reward
-    
-    def _force_gravity(self) -> Tuple[Any, int]:
-        reward = 0
+        return (score_1 - score_0) + (score_2 - score_0) * 0.2, {}
+
+    def _recalc_score(self) -> None:
+        self.score = 0
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE - i - 1):
+                if self.grid.grid[i][j] != 0:
+                    self.score -= 1.2 ** (i + j)
+
+    def _force_gravity(self) -> None:
         while True:
             match self.direction():
                 case 'Horizontal':
@@ -88,17 +101,38 @@ class Game:
             clear, score = self.grid.check_patterns()
             if score == 0:
                 break
-            self.score += score
+            self.points += score
             self.grid.clear_blocks(clear)
-            self.render(0.1)    
-            reward += score
-        return None, score
+            self.render(0.1)
 
-    def observe(self) -> int:
-        return 0
-    
+    def observe(self) -> np.array:
+        ret = np.zeros((BLOCK_TYPES + 1, GRID_SIZE, INTERNAL_GRID_SIZE), dtype=np.int32)
+        match self.direction():
+            case 'Horizontal':
+                for x in range(GRID_SIZE):
+                    for y in range(GRID_SIZE):
+                        id = self.grid.grid[x][y]
+                        if id != 0:
+                            ret[id - 1][y][x] = 1
+            case 'Vertical':
+                for x in range(GRID_SIZE):
+                    for y in range(GRID_SIZE):
+                        id = self.grid.grid[x][y]
+                        if id != 0:
+                            ret[id - 1][y][x] = 1
+        blocks = self.piece().blocks
+        n, m = blocks.shape
+        for i in range(n):
+            for j in range(m):
+                id = blocks[i][j]
+                if id != 0:
+                    ret[id - 1][self.piece().pos + i][GRID_SIZE + j] = 1
+        if self.direction() != self.directions[1]:
+            ret[4].fill(1)
+        return ret
+
     def render(self, sleep = 0.0) -> None:
-        if not self.render_mode:
+        if self.screen == None:
             return
         
         def write(x: int, y: int, s: str, c: int):
@@ -147,8 +181,9 @@ class Game:
                 ret += wide_list[ord(c) - ord('0')]
             return ret
 
-        write(1, GRID_SIZE + 9, f'Ｓｃｏｒｅ：{wide_number(self.score)}', Colors.WHITE_FG)
-        write(3, GRID_SIZE + 9, 'Ｎｅｘｔ', Colors.WHITE_FG)
+        write(1, GRID_SIZE + 9, f'Ｓｃｏｒｅ：{wide_number(self.points)}', Colors.WHITE_FG)
+        write(3, GRID_SIZE + 9, f'Ｔｕｒｎ：{wide_number(self.turn)}', Colors.WHITE_FG)
+        write(5, GRID_SIZE + 9, 'Ｎｅｘｔ', Colors.WHITE_FG)
 
         for (k, piece) in enumerate(self.pieces):
             if k == 0:
@@ -157,16 +192,16 @@ class Game:
             n, m = blocks.shape
             for i in range(n):
                 for j in range(m):
-                    write(1 + 4 * k + i, GRID_SIZE + 9 + j, '　', Colors.BLOCKS[blocks[i][j]])
+                    write(3 + 4 * k + i, GRID_SIZE + 9 + j, '　', Colors.BLOCKS[blocks[i][j]])
 
         for (k, dir) in enumerate(self.directions):
             if k == 0:
                 continue
-            write(2 + 4 * k, GRID_SIZE + 15, 'Ｈ' if dir == 'Horizontal' else 'Ｖ', curses.color_pair(7))
+            write(4 + 4 * k, GRID_SIZE + 15, 'Ｈ' if dir == 'Horizontal' else 'Ｖ', curses.color_pair(7))
 
         if self.game_over:
-            write(13, GRID_SIZE + 9, 'Ｇａｍｅ　Ｏｖｅｒ', Colors.WHITE_FG)
-            write(15, GRID_SIZE + 9, 'Ｐｒｅｓｓ　‘ｑ’　ｔｏ　Ｅｘｉｔ', Colors.WHITE_FG)
+            write(15, GRID_SIZE + 9, 'Ｇａｍｅ　Ｏｖｅｒ', Colors.WHITE_FG)
+            write(17, GRID_SIZE + 9, 'Ｐｒｅｓｓ　‘ｑ’　ｔｏ　Ｅｘｉｔ', Colors.WHITE_FG)
 
         self.screen.refresh()
         time.sleep(sleep)

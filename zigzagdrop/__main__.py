@@ -1,6 +1,6 @@
 from config import *
-from player import HumanPlayer
-from game_env.action import Action, ActionType
+from player import *
+from game_env.action import ActionType
 
 import time
 import curses
@@ -31,6 +31,31 @@ def play_solo(screen):
             break
     env.close()
 
+def play_ai(screen):
+    player = AIPlayer("/home/kodamankod/ml/rl/ZigZagDrop/zigzagdrop/learning/runs/zigzagdrop-v1__train__42__1723373997/train.model")
+    env = gym.make(
+        "zigzagdrop-v1",
+        action_type = ActionType.AI,
+        screen = screen
+    )
+    obs, _ = env.reset()
+    env.render()
+
+    while True:
+        env.render()
+        action = player.get_action(obs)
+        obs, _, done, _, _ = env.step(action)
+        time.sleep(0.5)
+        if done:
+            break
+
+    env.render()
+    while True:
+        key = screen.getch()
+        if key == ord('q'):
+            break
+    env.close()
+
 def main(screen):
     curses.noecho()
     curses.start_color()
@@ -48,7 +73,8 @@ def main(screen):
     curses.init_pair(Colors.RED_FG, curses.COLOR_RED, curses.COLOR_BLACK)
 
     time.sleep(1.0)
-    play_solo(screen)
+    # play_solo(screen)
+    play_ai(screen)
 
 if __name__ == "__main__":
     time.sleep(1.0)
