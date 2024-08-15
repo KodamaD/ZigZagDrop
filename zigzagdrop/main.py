@@ -5,6 +5,7 @@ from game_env.action import ActionType
 import time
 import curses
 import gymnasium as gym
+from pathlib import Path
 
 def play_solo(screen):
     player = HumanPlayer(screen)
@@ -31,8 +32,9 @@ def play_solo(screen):
             break
     env.close()
 
-def play_ai(screen):
-    player = AIPlayer("/home/kodamankod/ml/rl/ZigZagDrop/zigzagdrop/learning/runs/zigzagdrop-v1__train__42__1723373997/train.model")
+def play_ai(screen, model_name):
+    model_path = Path(__file__).parent.joinpath("learning", "runs", model_name, "train.model")
+    player = AIPlayer(model_path)
     env = gym.make(
         "zigzagdrop-v1",
         action_type = ActionType.AI,
@@ -43,9 +45,8 @@ def play_ai(screen):
 
     while True:
         env.render()
-        action = player.get_action(obs)
+        action = player.get_action(env, obs)
         obs, _, done, _, _ = env.step(action)
-        time.sleep(0.5)
         if done:
             break
 
@@ -56,7 +57,7 @@ def play_ai(screen):
             break
     env.close()
 
-def main(screen):
+def main(screen, player_type, model_name):
     curses.noecho()
     curses.start_color()
     curses.curs_set(False)
@@ -72,10 +73,18 @@ def main(screen):
     curses.init_pair(Colors.WHITE_FG, curses.COLOR_WHITE, curses.COLOR_BLACK)
     curses.init_pair(Colors.RED_FG, curses.COLOR_RED, curses.COLOR_BLACK)
 
-    time.sleep(1.0)
-    # play_solo(screen)
-    play_ai(screen)
+    time.sleep(0.5)
+    
+    if player_type == "A":
+        play_ai(screen, model_name)
+    else:
+        play_solo(screen)
 
 if __name__ == "__main__":
-    time.sleep(1.0)
-    curses.wrapper(main)
+    time.sleep(0.5)
+    player_type = input("Choose player [A or H]: ")
+    if player_type == "A":
+        model_name = input("Choose model: ")    
+    else:
+        model_name = ""
+    curses.wrapper(main, player_type, model_name)

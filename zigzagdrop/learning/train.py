@@ -19,6 +19,8 @@ import sys
 sys.path.append('../')
 from game_env.action import Action, ActionType
 
+import wandb
+
 @dataclass
 class Args:
     # envirionment
@@ -33,18 +35,18 @@ class Args:
 
     # algorithm
     env_id: str = "zigzagdrop-v1"
-    total_timesteps: int = 500000
+    total_timesteps: int = 10000
     learning_rate: float = 2.5e-4
     buffer_size: int = 10000
     gamma: float = 0.99
-    tau: float = 1.0
-    target_network_frequency: int = 500
+    tau: float = 1
+    target_network_frequency: int = 100
     batch_size: int = 128
     start_e: float = 1
     end_e: float = 0.05
     exploration_fraction: float = 0.5
-    learning_starts: int = 10000
-    train_frequency: int = 10
+    learning_starts: int = 500
+    train_frequency: int = 50
 
 def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     slope = (end_e - start_e) / duration
@@ -52,6 +54,8 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
 
 def train(args: Args):
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+
+    wandb.init(project="zigzagdrop")
 
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
@@ -94,10 +98,12 @@ def train(args: Args):
                 data = rb.sample(args.batch_size)
                 with torch.no_grad():
                     target_max, _ = target_network(data.next_observations).max(dim=1)
-                    td_target = data.rewards.flatten() + args.gamma * target_max * (1 - data.dones.flatten())
+                    td_target = data.rewards.flatten() + args.gamma * target_max * (1. - data.dones.flatten())
                     td_target = td_target.float()
                 old_val = q_network(data.observations).gather(1, data.actions.unsqueeze(0)).squeeze()
                 loss = F.mse_loss(td_target, old_val)
+                
+                wandb.log({"loss": loss, "q_value": old_val, "target": td_target})
 
                 if global_step % 100 == 0:
                     writer.add_scalar("losses/td_loss", loss, global_step)
@@ -118,6 +124,7 @@ def train(args: Args):
         torch.save(q_network.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
+    wandb.finish()
     env.close()
     writer.close()
 

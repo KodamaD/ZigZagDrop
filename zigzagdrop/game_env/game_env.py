@@ -56,5 +56,13 @@ class GameEnv(gym.Env):
             {},
         )
 
+    def try_action(self, action: Action) -> bool:
+        assert self.action_type == ActionType.AI, "trying action disable for human player"
+        pos, rot = action.ai_action_to_tuple()
+        new_game = self.game.make_copy()
+        new_game.move_and_rot(pos, rot)
+        _, _ = new_game.place()
+        return new_game.game_over
+
     def render(self) -> None:
         self.game.render()

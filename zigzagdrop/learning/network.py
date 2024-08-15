@@ -4,7 +4,6 @@ import sys
 sys.path.append('../')
 from game_env.game import BLOCK_TYPES, GRID_SIZE, INTERNAL_GRID_SIZE
 
-# ALGO LOGIC: initialize agent here:
 class QNetwork(nn.Module):
     def __init__(self):
         super().__init__()

@@ -30,6 +30,13 @@ class Game:
         self.screen = screen
 
         self._load_data()
+        
+    def make_copy(self):
+        new_game = Game(None)
+        new_game.grid = deepcopy(self.grid)
+        new_game.pieces = deepcopy(self.pieces)
+        new_game.directions = deepcopy(self.directions)
+        return new_game
 
     def _load_data(self) -> None:
         while len(self.pieces) < PIECE_QUEUE_SIZE + 1:
@@ -69,7 +76,7 @@ class Game:
 
         self.game_over = self.grid.is_game_over()
         if self.game_over:
-            return -100, {}
+            return -0.1, {}
 
         self.turn += 1
         self.pieces.popleft()
@@ -81,14 +88,14 @@ class Game:
         self._recalc_score()
         score_2 = self.score
 
-        return (score_1 - score_0) + (score_2 - score_0) * 0.2, {}
+        return 0.1, {}
 
     def _recalc_score(self) -> None:
         self.score = 0
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE - i - 1):
                 if self.grid.grid[i][j] != 0:
-                    self.score -= 1.2 ** (i + j)
+                    self.score += 1.2 ** -(i + j)
 
     def _force_gravity(self) -> None:
         while True:
@@ -129,7 +136,7 @@ class Game:
                     ret[id - 1][self.piece().pos + i][GRID_SIZE + j] = 1
         if self.direction() != self.directions[1]:
             ret[4].fill(1)
-        return ret
+        return ret + 0.01
 
     def render(self, sleep = 0.0) -> None:
         if self.screen == None:

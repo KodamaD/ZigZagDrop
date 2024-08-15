@@ -1,9 +1,11 @@
 from game_env.action import Action, HumanAction
+from learning.network import QNetwork
 
 import curses
 import torch
 import numpy as np
-from learning.network import QNetwork
+
+from copy import deepcopy
 
 class HumanPlayer:
     def __init__(self, screen) -> None:
@@ -43,6 +45,18 @@ class AIPlayer:
         self.model.load_state_dict(torch.load(model_path))
         self.model.eval()
 
-    def get_action(self, obs: np.array) -> Action:
-        q_values = self.model(torch.from_numpy(np.expand_dims(obs, 0).astype(np.float32)))
-        return Action(torch.argmax(q_values, dim=1).item())
+    def get_action(self, env, obs: np.array) -> Action:
+        q_values = self.model(torch.from_numpy(np.expand_dims(obs, 0).astype(np.float32))).squeeze()
+        
+        best = -1
+        for i in range(env.action_space.n):
+            if not env.unwrapped.try_action(Action(i)):
+                if best == -1:
+                    best = i
+                else:
+                    if q_values[best] < q_values[i]:
+                        best = i
+
+        if best == -1:
+            return Action(env.action_space.sample())        
+        return Action(best)
