@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import Tuple
+from typing import Tuple, List
 from .game_config import *
 
 class Grid:
@@ -11,8 +11,9 @@ class Grid:
         
         self.grid = grid
     
-    def place_horizontal(self, sy: int, blocks: np.array) -> None:
+    def place_horizontal(self, sy: int, blocks: np.array) -> List[Tuple[int, int]]:
         n, m = blocks.shape
+        ret = []
         for dy in range(n):
             y = sy + dy
             if np.sum(blocks[dy]) == 0:
@@ -25,11 +26,16 @@ class Grid:
             for i in range(m):
                 if blocks[dy][i] == 0:
                     continue
+                if x >= INTERNAL_GRID_SIZE:
+                    break
                 self.grid[x][y] = blocks[dy][i]
+                ret.append((x, y))
                 x += 1
+        return ret
 
-    def place_vertical(self, sx: int, blocks: np.array) -> bool:
+    def place_vertical(self, sx: int, blocks: np.array) -> List[Tuple[int, int]]:
         n, m = blocks.shape
+        ret = []
         for dx in range(n):
             x = sx + dx
             if np.sum(blocks[dx]) == 0:
@@ -42,8 +48,58 @@ class Grid:
             for i in range(m):
                 if blocks[dx][i] == 0:
                     continue
+                if y >= INTERNAL_GRID_SIZE:
+                    break
                 self.grid[x][y] = blocks[dx][i]
+                ret.append((x, y))
                 y += 1
+        return ret
+
+    def calc_features(self) -> List[float]:
+        zigs = 0
+        far = 0
+        count = 0
+        dist = 0
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if self.grid[i][j] != 0:
+                    if i > 0 and self.grid[i - 1][j] == 0:
+                        zigs += 1
+                    if j > 0 and self.grid[i][j - 1] == 0:
+                        zigs += 1
+                    far = max(far, i + j)
+                    count += 1
+                    dist += GRID_SIZE - i - j - 1                    
+        l = 0
+        t = 0
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                x = self.grid[i][j]
+                if x == 0:
+                    continue
+                if x == self.grid[i + 1][j]:
+                    if x == self.grid[i + 2][j]:
+                        l += 1
+                    if x == self.grid[i][j + 1]:
+                        t += 1
+                    if x == self.grid[i + 1][j + 1]:
+                        t += 1
+                    if j > 0:
+                        if x == self.grid[i][j - 1]:
+                            t += 1
+                        if x == self.grid[i + 1][j - 1]:
+                            t += 1
+                if x == self.grid[i][j + 1]:
+                    if x == self.grid[i][j + 2]:
+                        l += 1
+        return [
+            zigs / (GRID_SIZE ** 2), 
+            far / GRID_SIZE,
+            dist / (GRID_SIZE ** 3),
+            count / (GRID_SIZE ** 2),
+            l / (GRID_SIZE ** 2),
+            t / (GRID_SIZE ** 2)
+        ]
 
     def fix_horizontal(self) -> None:
         for y in range(INTERNAL_GRID_SIZE):

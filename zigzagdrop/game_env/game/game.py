@@ -62,6 +62,7 @@ class Game:
             self.piece().rot_l()
 
     def place(self) -> Tuple[float, Dict]:
+        coeff = 1 / (1 + np.log(1 + 0.1 * np.sum(self.grid.grid != 0)))
         score_0 = self.score
         
         match self.direction():
@@ -76,7 +77,7 @@ class Game:
 
         self.game_over = self.grid.is_game_over()
         if self.game_over:
-            return -0.1, {}
+            return -1., {}
 
         self.turn += 1
         self.pieces.popleft()
@@ -88,14 +89,14 @@ class Game:
         self._recalc_score()
         score_2 = self.score
 
-        return 0.1, {}
+        return 0.1 + coeff * ((score_1 - score_0) * 0.02 + (score_2 - score_1) * 0.001), {}
 
     def _recalc_score(self) -> None:
         self.score = 0
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE - i - 1):
                 if self.grid.grid[i][j] != 0:
-                    self.score += 1.2 ** -(i + j)
+                    self.score -= 1.2 ** -(GRID_SIZE - i - j)
 
     def _force_gravity(self) -> None:
         while True:
@@ -113,30 +114,23 @@ class Game:
             self.render(0.1)
 
     def observe(self) -> np.array:
-        ret = np.zeros((BLOCK_TYPES + 1, GRID_SIZE, INTERNAL_GRID_SIZE), dtype=np.int32)
-        match self.direction():
-            case 'Horizontal':
-                for x in range(GRID_SIZE):
-                    for y in range(GRID_SIZE):
-                        id = self.grid.grid[x][y]
-                        if id != 0:
-                            ret[id - 1][y][x] = 1
-            case 'Vertical':
-                for x in range(GRID_SIZE):
-                    for y in range(GRID_SIZE):
-                        id = self.grid.grid[x][y]
-                        if id != 0:
-                            ret[id - 1][y][x] = 1
-        blocks = self.piece().blocks
-        n, m = blocks.shape
-        for i in range(n):
-            for j in range(m):
-                id = blocks[i][j]
-                if id != 0:
-                    ret[id - 1][self.piece().pos + i][GRID_SIZE + j] = 1
-        if self.direction() != self.directions[1]:
-            ret[4].fill(1)
-        return ret + 0.01
+        piece = deepcopy(self.piece())
+        ret = []
+        for id in range(GRID_SIZE * 4):
+            piece.pos = id // 4 - 1
+            piece.fix_position()
+            match self.direction():
+                case 'Horizontal':
+                    memo = self.grid.place_horizontal(piece.pos, piece.blocks)
+                case 'Vertical':
+                    memo = self.grid.place_vertical(piece.pos, piece.blocks)
+            tmp = self.grid.calc_features()
+            tmp.append(1. if self.directions[0] != self.directions[1] else 0.)
+            ret.append(np.array(tmp, dtype=np.float32))
+            for (i, j) in memo:
+                self.grid.grid[i][j] = 0
+            piece.rot_l()
+        return np.array(ret)
 
     def render(self, sleep = 0.0) -> None:
         if self.screen == None:

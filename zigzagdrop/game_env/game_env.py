@@ -5,7 +5,7 @@ import random
 from typing import Tuple, Dict, Any
 
 from .action import Action, ActionType, HumanAction
-from game_env.game import Game, GRID_SIZE, BLOCK_TYPES, INTERNAL_GRID_SIZE
+from game_env.game import Game, GRID_SIZE, BLOCK_TYPES, INTERNAL_GRID_SIZE, NUM_FEATURES
 
 class GameEnv(gym.Env):
     def __init__(self, action_type: ActionType, screen: Any) -> None:
@@ -13,7 +13,7 @@ class GameEnv(gym.Env):
         self.action_type = action_type
         self.screen = screen
 
-        self.observation_space = gym.spaces.MultiDiscrete(np.full((BLOCK_TYPES + 1, GRID_SIZE, INTERNAL_GRID_SIZE), 2, dtype=np.int32))
+        self.observation_space = gym.spaces.Box(low=-5.0, high=5.0, shape=(GRID_SIZE * 4, NUM_FEATURES), dtype=np.float32)
 
         match self.action_type:
             case ActionType.HUMAN:

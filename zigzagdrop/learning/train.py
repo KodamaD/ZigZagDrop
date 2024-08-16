@@ -14,10 +14,12 @@ from torch.utils.tensorboard import SummaryWriter
 
 from network import QNetwork
 from replay_buffer import ReplayBuffer
+from tqdm import tqdm
 
 import sys
 sys.path.append('../')
 from game_env.action import Action, ActionType
+from game_env.game.game_config import GRID_SIZE, NUM_FEATURES
 
 import wandb
 
@@ -25,7 +27,7 @@ import wandb
 class Args:
     # envirionment
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
-    seed: int = 42
+    seed: int = 202408
     num_envs: int = 1
     torch_deterministic: bool = True
     cuda: bool = True
@@ -38,15 +40,15 @@ class Args:
     total_timesteps: int = 10000
     learning_rate: float = 2.5e-4
     buffer_size: int = 10000
-    gamma: float = 0.99
-    tau: float = 1
-    target_network_frequency: int = 100
-    batch_size: int = 128
+    gamma: float = 0.9
+    tau: float = 0.95
+    target_network_frequency: int = 200
+    batch_size: int = 64
     start_e: float = 1
     end_e: float = 0.05
     exploration_fraction: float = 0.5
     learning_starts: int = 500
-    train_frequency: int = 50
+    train_frequency: int = 10
 
 def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     slope = (end_e - start_e) / duration
@@ -78,37 +80,38 @@ def train(args: Args):
 
     start_time = time.time()
     obs, _ = env.reset(seed=args.seed)
-    for global_step in range(args.total_timesteps):
+    for global_step in tqdm(range(args.total_timesteps)):
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
+        q_values = q_network(torch.from_numpy(obs).to(device))
         if random.random() < epsilon:
             action = env.action_space.sample()
         else:
-            q_values = q_network(torch.from_numpy(obs.astype(np.float32)).unsqueeze(0).to(device))
-            action = torch.argmax(q_values, dim=1).cpu().item()
+            action = torch.argmax(q_values).cpu().item()
+    
     
         next_obs, reward, termination, _, _ = env.step(Action(action))
-        rb.add(obs.astype(np.float32), next_obs.astype(np.float32), action, reward, int(termination))
+        rb.add(obs, next_obs, action, reward, int(termination))
 
         if termination:
-            next_obs, _ = env.reset(seed=args.seed + global_step)
-        obs = next_obs
+            obs, _ = env.reset(seed=args.seed + global_step)
+        else:
+            obs = next_obs
 
         if global_step > args.learning_starts:
             if global_step % args.train_frequency == 0:
                 data = rb.sample(args.batch_size)
                 with torch.no_grad():
-                    target_max, _ = target_network(data.next_observations).max(dim=1)
+                    target_max, _ = torch.reshape(target_network(data.next_observations.flatten(end_dim=1)), (-1,GRID_SIZE*4)).max(dim=1)
                     td_target = data.rewards.flatten() + args.gamma * target_max * (1. - data.dones.flatten())
                     td_target = td_target.float()
-                old_val = q_network(data.observations).gather(1, data.actions.unsqueeze(0)).squeeze()
-                loss = F.mse_loss(td_target, old_val)
-                
+                old_val = torch.reshape(q_network(data.observations.flatten(end_dim=1)), (-1,GRID_SIZE*4)).gather(1, data.actions.unsqueeze(0)).squeeze()
+                loss = F.huber_loss(td_target, old_val)
+
                 wandb.log({"loss": loss, "q_value": old_val, "target": td_target})
 
                 if global_step % 100 == 0:
                     writer.add_scalar("losses/td_loss", loss, global_step)
                     writer.add_scalar("losses/q_values", old_val.mean().item(), global_step)
-                    print("SPS:", int(global_step / (time.time() - start_time)))
                     writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
                 optimizer.zero_grad()

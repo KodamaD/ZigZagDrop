@@ -6,7 +6,7 @@ class Action:
         self.id = id
 
     def ai_action_to_tuple(self) -> Tuple[int, int]:
-        return self.id // 4, self.id % 4
+        return self.id // 4 - 1, self.id % 4
 
 class ActionType(Enum):
     HUMAN = 0

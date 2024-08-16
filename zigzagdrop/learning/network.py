@@ -2,28 +2,25 @@ import torch.nn as nn
 
 import sys
 sys.path.append('../')
-from game_env.game import BLOCK_TYPES, GRID_SIZE, INTERNAL_GRID_SIZE
+from game_env.game.game_config import NUM_FEATURES
 
 class QNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv2d(BLOCK_TYPES + 1, 2 * (BLOCK_TYPES + 1), kernel_size=5, padding=2),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Linear(NUM_FEATURES, 32),
             nn.ReLU(),
-            nn.Dropout(0.25),
-            nn.Conv2d(2 * (BLOCK_TYPES + 1), 4 * (BLOCK_TYPES + 1), kernel_size=3, padding=1),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Linear(32, 128),
             nn.ReLU(),
-            nn.Dropout(0.25),
-            nn.Flatten(),
-            nn.Linear(4 * (BLOCK_TYPES + 1) * (GRID_SIZE // 4) * (INTERNAL_GRID_SIZE // 4), 120),
+            nn.Dropout(),
+            nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(120, 84),
+            nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(84, GRID_SIZE * 4),
+            nn.Dropout(),
+            nn.Linear(128, 16),
+            nn.ReLU(),
+            nn.Linear(16, 1),
         )
 
     def forward(self, x):

@@ -46,8 +46,8 @@ class AIPlayer:
         self.model.eval()
 
     def get_action(self, env, obs: np.array) -> Action:
-        q_values = self.model(torch.from_numpy(np.expand_dims(obs, 0).astype(np.float32))).squeeze()
-        
+        q_values = self.model(torch.from_numpy(obs))
+
         best = -1
         for i in range(env.action_space.n):
             if not env.unwrapped.try_action(Action(i)):
