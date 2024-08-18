@@ -5,13 +5,14 @@ import random
 from typing import Tuple, Dict, Any
 
 from .action import Action, ActionType, HumanAction
-from game_env.game import Game, GRID_SIZE, BLOCK_TYPES, INTERNAL_GRID_SIZE, NUM_FEATURES
+from game_env.game import Game, GRID_SIZE, NUM_FEATURES
 
 class GameEnv(gym.Env):
-    def __init__(self, action_type: ActionType, screen: Any) -> None:
+    def __init__(self, action_type: ActionType, screen: Any, slow_render: bool) -> None:
         self.game = None
         self.action_type = action_type
         self.screen = screen
+        self.slow_render = slow_render
 
         self.observation_space = gym.spaces.Box(low=-5.0, high=5.0, shape=(GRID_SIZE * 4, NUM_FEATURES), dtype=np.float32)
 
@@ -22,7 +23,7 @@ class GameEnv(gym.Env):
                 self.action_space = gym.spaces.Discrete(GRID_SIZE * 4)
 
     def reset(self, seed=None, options=None) -> Tuple[np.array, Dict]:
-        self.game = Game(self.screen)
+        self.game = Game(self.screen, self.slow_render)
         if seed != None:
             random.seed(seed)
         return self.game.observe(), {}

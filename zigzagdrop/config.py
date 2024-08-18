@@ -1,7 +1,7 @@
 
 class Colors:
     BLACK = 1
-    BLOCKS = [1, 2, 3, 4, 5]
-    WHITE_BG = 6
-    WHITE_FG = 7
-    RED_FG = 8
+    WHITE_BG = 2
+    WHITE_FG = 3
+    RED_FG = 4
+    BLOCKS = [1, 5, 6, 7, 8, 9]

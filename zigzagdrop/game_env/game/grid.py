@@ -127,12 +127,13 @@ class Grid:
                 return True
         return False
 
-    def check_patterns(self) -> Tuple[np.array, int]:
+    def check_patterns(self) -> Tuple[np.array, int, List[int]]:
         cleared = np.zeros_like(self.grid, dtype=np.int32)
         score_sum = 0
+        count = [0] * len(PATTERN_LIST)
 
         for rotation in range(4):
-            for (pattern, clear, rotation_limit, score) in PATTERN_LIST:
+            for (id, (pattern, clear, rotation_limit, score)) in enumerate(PATTERN_LIST):
                 if rotation >= rotation_limit:
                     continue
                 
@@ -161,11 +162,12 @@ class Grid:
                                 if 0 <= x < INTERNAL_GRID_SIZE and 0 <= y < INTERNAL_GRID_SIZE:
                                     cleared[x][y] = 1    
                             score_sum += score
+                            count[id] += 1
                         
             self.grid = np.rot90(self.grid)
             cleared = np.rot90(cleared)
             
-        return cleared, score_sum
+        return cleared, score_sum, count
 
     def clear_blocks(self, clear: np.array) -> None:
         self.grid = np.multiply(self.grid, 1 - clear)

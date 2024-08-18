@@ -17,7 +17,7 @@ sys.path.append('.../')
 from config import *
 
 class Game:
-    def __init__(self, screen: Any) -> None:
+    def __init__(self, screen: Any, slow_render = False) -> None:
         self.grid = Grid(np.zeros((INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE), dtype=np.int32))
         self.pieces = deque()
         self.directions = deque()
@@ -25,9 +25,11 @@ class Game:
         self.turn = 0
         self.points = 0
         self.score = 0.0
+        self.clear_count = [0] * len(PATTERN_LIST)
         self.game_over = False
         
         self.screen = screen
+        self.slow_render = slow_render
 
         self._load_data()
         
@@ -64,6 +66,7 @@ class Game:
     def place(self) -> Tuple[float, Dict]:
         coeff = 1 / (1 + np.log(1 + 0.1 * np.sum(self.grid.grid != 0)))
         score_0 = self.score
+        points_0 = self.points
         
         match self.direction():
             case 'Horizontal':
@@ -74,6 +77,7 @@ class Game:
         self._force_gravity()
         self._recalc_score()
         score_1 = self.score
+        points_1 = self.points
 
         self.game_over = self.grid.is_game_over()
         if self.game_over:
@@ -86,17 +90,13 @@ class Game:
 
         self._force_gravity()
         self._recalc_score()
-        self._recalc_score()
         score_2 = self.score
+        points_2 = self.points
 
         return 0.1 + coeff * ((score_1 - score_0) * 0.02 + (score_2 - score_1) * 0.001), {}
 
     def _recalc_score(self) -> None:
-        self.score = 0
-        for i in range(GRID_SIZE):
-            for j in range(GRID_SIZE - i - 1):
-                if self.grid.grid[i][j] != 0:
-                    self.score -= 1.2 ** -(GRID_SIZE - i - j)
+        self.score = -np.sum(self.grid.grid != 0)
 
     def _force_gravity(self) -> None:
         while True:
@@ -106,11 +106,13 @@ class Game:
                 case 'Vertical':
                     self.grid.fix_vertical()
             self.render(0.1)
-            clear, score = self.grid.check_patterns()
+            clear, score, count = self.grid.check_patterns()
             if score == 0:
                 break
             self.points += score
             self.grid.clear_blocks(clear)
+            for (i, x) in enumerate(count):
+                self.clear_count[i] += x
             self.render(0.1)
 
     def observe(self) -> np.array:
@@ -139,8 +141,8 @@ class Game:
         def write(x: int, y: int, s: str, c: int):
             self.screen.addstr(x, 2 * y, s, curses.color_pair(c))
         
-        for i in range(GRID_SIZE + 7):
-            write(i, 0, '　' * 150, Colors.BLACK)
+        for i in range(GRID_SIZE + 10):
+            write(i, 0, '　' * 50, Colors.BLACK)
 
         match self.direction():
             case 'Horizontal':
@@ -163,7 +165,7 @@ class Game:
         for i in range(GRID_SIZE + 1):
             write(5 + i, 1, '　', Colors.WHITE_BG)
             write(5 + GRID_SIZE, 1 + i, '　', Colors.WHITE_BG)
-        for i in range(GRID_SIZE + 7):
+        for i in range(GRID_SIZE + 10):
             write(i, GRID_SIZE + 7, '：', Colors.WHITE_FG)
 
         for i in range(GRID_SIZE):
@@ -184,7 +186,8 @@ class Game:
 
         write(1, GRID_SIZE + 9, f'Ｓｃｏｒｅ：{wide_number(self.points)}', Colors.WHITE_FG)
         write(3, GRID_SIZE + 9, f'Ｔｕｒｎ：{wide_number(self.turn)}', Colors.WHITE_FG)
-        write(5, GRID_SIZE + 9, 'Ｎｅｘｔ', Colors.WHITE_FG)
+        write(5, GRID_SIZE + 9, f'Ｐｅｒ　Ｔｕｒｎ：{wide_number(0 if self.turn == 0 else int(self.points / self.turn))}', Colors.WHITE_FG)
+        write(7, GRID_SIZE + 9, 'Ｎｅｘｔ', Colors.WHITE_FG)
 
         for (k, piece) in enumerate(self.pieces):
             if k == 0:
@@ -193,16 +196,28 @@ class Game:
             n, m = blocks.shape
             for i in range(n):
                 for j in range(m):
-                    write(3 + 4 * k + i, GRID_SIZE + 9 + j, '　', Colors.BLOCKS[blocks[i][j]])
+                    write(5 + 4 * k + i, GRID_SIZE + 9 + j, '　', Colors.BLOCKS[blocks[i][j]])
 
         for (k, dir) in enumerate(self.directions):
             if k == 0:
                 continue
-            write(4 + 4 * k, GRID_SIZE + 15, 'Ｈ' if dir == 'Horizontal' else 'Ｖ', curses.color_pair(7))
+            write(6 + 4 * k, GRID_SIZE + 15, 'Ｈ' if dir == 'Horizontal' else 'Ｖ', curses.color_pair(7))
 
         if self.game_over:
-            write(15, GRID_SIZE + 9, 'Ｇａｍｅ　Ｏｖｅｒ', Colors.WHITE_FG)
-            write(17, GRID_SIZE + 9, 'Ｐｒｅｓｓ　‘ｑ’　ｔｏ　Ｅｘｉｔ', Colors.WHITE_FG)
+            write(17, GRID_SIZE + 9, 'Ｇａｍｅ　Ｏｖｅｒ', Colors.WHITE_FG)
+            write(19, GRID_SIZE + 9, 'Ｐｒｅｓｓ　‘ｑ’　ｔｏ　Ｅｘｉｔ', Colors.WHITE_FG)
+
+        write(1, GRID_SIZE + 27, 'Ｃｏｕｎｔ', Colors.WHITE_FG)
+        for (i, (shape, _, _, _)) in enumerate(PATTERN_LIST):
+            n, m = shape.shape
+            sx = 2 + 4 * i + (3 - n) // 2
+            sy = GRID_SIZE + 27
+            for x in range(n):
+                for y in range(m):
+                    if shape[x][y] == 1:
+                        write(sx + x, sy + y, '　', Colors.WHITE_BG)
+            write(sx + n // 2, sy + 5, f'：{wide_number(self.clear_count[i])}', Colors.WHITE_FG)
 
         self.screen.refresh()
-        time.sleep(sleep)
+        if self.slow_render:
+            time.sleep(sleep)

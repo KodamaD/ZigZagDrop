@@ -5,8 +5,6 @@ import curses
 import torch
 import numpy as np
 
-from copy import deepcopy
-
 class HumanPlayer:
     def __init__(self, screen) -> None:
         self.screen = screen
@@ -46,17 +44,10 @@ class AIPlayer:
         self.model.eval()
 
     def get_action(self, env, obs: np.array) -> Action:
-        q_values = self.model(torch.from_numpy(obs))
-
-        best = -1
-        for i in range(env.action_space.n):
+        q_values = self.model(torch.from_numpy(obs)).flatten()
+        indices = torch.argsort(q_values, descending=True).tolist()
+        for i in indices:
             if not env.unwrapped.try_action(Action(i)):
-                if best == -1:
-                    best = i
-                else:
-                    if q_values[best] < q_values[i]:
-                        best = i
+                return Action(i)
 
-        if best == -1:
-            return Action(env.action_space.sample())        
-        return Action(best)
+        return Action(env.action_space.sample())

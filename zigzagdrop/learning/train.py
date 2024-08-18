@@ -71,7 +71,7 @@ def train(args: Args):
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-    env = gym.make(args.env_id, action_type = ActionType.AI, screen = None)
+    env = gym.make(args.env_id, action_type = ActionType.AI, screen = None, slow_render = False)
     q_network = QNetwork().to(device)
     optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
     target_network = QNetwork().to(device)
@@ -87,7 +87,6 @@ def train(args: Args):
             action = env.action_space.sample()
         else:
             action = torch.argmax(q_values).cpu().item()
-    
     
         next_obs, reward, termination, _, _ = env.step(Action(action))
         rb.add(obs, next_obs, action, reward, int(termination))

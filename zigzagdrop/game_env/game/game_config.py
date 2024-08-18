@@ -26,7 +26,7 @@ PATTERN_LIST = [
         ]),
         [(0, j) for j in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)],
         2,
-        300,
+        50,
     ),
     (
         np.array([
@@ -36,7 +36,7 @@ PATTERN_LIST = [
         ]),
         [(0, j) for j in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)] + [(i, 0) for i in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)],
         4,
-        500,
+        250,
     ),
     (
         np.array([
@@ -46,7 +46,7 @@ PATTERN_LIST = [
         ]),
         [(k + 1, -k) for k in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)] + [(k + 2, -k) for k in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)],
         4,
-        500,
+        1000,
     ),
     (
         np.array([
@@ -56,7 +56,7 @@ PATTERN_LIST = [
         ]),
         [(i, j) for i in range(-1, 4) for j in range(-1, 4)],
         1,
-        500,
+        1000,
     ),
     (
         np.array([
@@ -66,6 +66,6 @@ PATTERN_LIST = [
         ]),
         [(1, j) for j in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)] + [(i, 0) for i in range(-INTERNAL_GRID_SIZE, INTERNAL_GRID_SIZE)],
         4,
-        500,
+        250,
     ),
 ]
