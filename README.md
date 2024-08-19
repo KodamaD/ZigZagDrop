@@ -4,7 +4,7 @@
 
 ## ルール
 
-![[demo/game_rule.png]]
+![rule](https://github.com/KodamaD/ZigZagDrop/blob/main/demo/game_rule.png)
 
 **オブジェクト**
 
